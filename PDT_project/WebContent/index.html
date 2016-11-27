@@ -1,0 +1,399 @@
+<!doctype html>
+<html>
+
+	<head>
+		<link href='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.css' rel='stylesheet' />
+		<script src='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.js'></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	</head>
+		
+
+	<body style="background-color:powderblue;">
+			
+			
+		<div id="sidebar" style=' height: 100%; width: 250px; position: fixed;  top: 0; left: 0; padding-top: 10px; background-color: #789; '>
+			
+			<form style=' margin-left: 10px; margin-right: 10px;' id= "form1" action= "javascript:standardQuery()">
+				<fieldset>
+				<legend>Position</legend>
+				
+				<label>First you must choose the position. You can choose your actual position by clicking on button 'My position' or other position by clicking on the map.</label>
+				<br /><br />
+				<button onclick="myPos()">My position</button>
+				<button style=' margin-left: 30px;' onclick="clearMap()">Clear map</button>
+			
+				
+				</fieldset>
+			</form>
+			
+			<br />
+			<form style=' margin-left: 10px; margin-right: 10px;' id= "form3">
+				<fieldset>
+					<legend>Near places and parking</legend>
+					<label>Choose the types of places:</label>
+					<br />
+					<input type="checkbox" id="pub" value="v1">Pub (green)<br>
+					<input type="checkbox" id="bar" value="v2">Bar (yellow)<br>
+					<input type="checkbox" id="club" value="v2">Nightclub (blue)<br>
+					<input type="checkbox" id="casino" value="v2">Casino (red)<br>
+					<input type="checkbox" id="cinema" value="v2">Cinema (orange)<br>
+					<input type="checkbox" id="theatre" value="v2">Theatre (purple)<br>
+					
+					<br />
+					<label >Enter the distance in meters:</label>
+					<br />
+					<input type="number" id= "dist" min= 0 max = 3000></input>
+					<br /><br />
+					<button id="b" title="By clicking this button the map will display all places of selected types in selected distance" type="button" onclick="getByDist()">Show places</button><br /><br />
+					<button id="b" title="By clicking this button the map will display only places with near parking (200 m). By double clicking on concrete place parking will be displayed." type="button" onclick="getByDistanceWithPark()">Show places with near parking</button>
+														
+				</fieldset>
+			</form>
+			<br />
+			<form style=' margin-left: 10px; margin-right: 10px;' id= "form2" action= "javascript:standardQuery()">
+				<fieldset>
+					<legend>Nearest place and ATMs</legend>
+					<label>Choose the type of place:</label>
+					<br />
+					<select id="type" name= "namef1">
+						<option value= "empty"></option>
+						<option value= "o1">Pub</option>
+						<option value= "o2">Bar</option>
+						<option value= "o3">Nightclub</option>
+						<option value= "o4">Casino</option>
+						<option value= "o5">Cinema</option>
+						<option value= "o6">Theatre</option>
+					</select>
+					<br /><br />
+					
+					<label>Choose the bank:</label>
+					<br />
+					<select id="bank" name= "namef1">
+						<option value= "all">All</option>
+						<option value= "o1">CSOB</option>
+						<option value= "o2">OTP banka</option>
+						<option value= "o3">Postova banka</option>
+						<option value= "o4">Prima banka</option>
+						<option value= "o5">Sberbank</option>
+						<option value= "o6">Slovenska sporitelna</option>
+						<option value= "o7">Tatra banka</option>
+						<option value= "o8">UniCredit Bank</option>
+						<option value= "o9">VUB</option>
+					</select>
+					<br /><br />
+					<!--<input id= "in" type= "submit" value= "Zobraz"></input>-->
+					<button title="By clicking this button the map will display nearest place of selected type and nearest ATM on road from selected position to selected place." type="button" onclick="getNearestAndATM()">Show nearest place and ATM</button><br /><br />
+					<button title="By clicking this button the map will display nearest place of selected type and 5 nearest ATMs from this place" type="button" onclick="getNearestAndATM5()">Show nearest place and 5 ATMs</button>
+				</fieldset>
+			</form>
+			
+			<br />
+			
+			
+		</div>				
+		
+		
+		<div id="desktop" style='margin-left: 250px;'>	
+	
+		<div id="title">
+				
+					<h1>Evening entertainment</h1>
+				
+		</div>
+	
+	
+		<div id='map' style='width: 1270px; height: 670px;' > </div>
+		
+		<script>
+		
+			L.mapbox.accessToken = 'pk.eyJ1IjoicGFjbzkiLCJhIjoiY2l2cGNrNjkzMDAxZzJ5bHVxcDFqeDJmZSJ9.LQvjS2FTjxtoH3oqMe2Z8A';
+			map = L.mapbox.map('map', 'mapbox.streets').setView([48.157,17.129], 14);
+			
+			jQuery.get("http://localhost:8080/PDT_project/application/query/connect/", function(response) { 
+				
+			});
+			
+			var layer = L.mapbox.featureLayer().addTo(map);
+			var layer2 = L.mapbox.featureLayer().addTo(map);
+			var map;
+			var marker;
+			var circle;
+			var longitude;
+			var latitude;
+			
+			
+			function myPos() {
+				
+				navigator.geolocation.getCurrentPosition(getPos);
+				
+			}
+				
+			function getPos(pos) {
+				latitude  = pos.coords.latitude;
+				longitude = pos.coords.longitude;
+				
+				if (marker != null){
+					map.removeLayer(marker);
+				}
+				
+				marker = new L.marker([latitude,longitude]).addTo(map);
+				map.setView([latitude,longitude], 14);
+				
+			}
+			
+			
+				
+			map.on('click', function (e) {
+				
+				if (marker != null){
+					map.removeLayer(marker);
+				}
+					
+				marker = new L.Marker(e.latlng).addTo(map);
+				latitude = e.latlng.lat;
+				longitude = e.latlng.lng;
+				map.setView([latitude,longitude], 14);
+			});
+			
+			
+			function getByDist() {
+				var amenity = "";
+				var ischecked = 0;
+				var dist = document.getElementById('dist').value;
+				if (circle!=null) map.removeLayer(circle);
+
+				if (layer != null) layer.clearLayers();
+				if (layer2 != null) layer2.clearLayers();
+				if (marker==null || latitude == null) window.alert("Position is not selected");
+				
+				else{
+					if (dist == "") window.alert("Distance is not selected");
+					else{
+						
+						if (document.getElementById('bar').checked == true){
+							if (amenity == "") amenity = "'bar'";
+							else amenity = amenity + " or amenity = 'bar'";
+							ischecked = ischecked + 1;
+						}
+						if (document.getElementById('pub').checked == true){
+							if (amenity == "") amenity = "'pub'";
+							else amenity = amenity + " or amenity = 'pub'";
+							ischecked = ischecked + 1;
+						}
+						if (document.getElementById('club').checked == true){
+							if (amenity == "") amenity = "'nightclub'";
+							else amenity = amenity + " or amenity = 'nightclub'";
+							ischecked = ischecked + 1;
+						}
+						if (document.getElementById('casino').checked == true){
+							if (amenity == "") amenity = "'casino'";
+							else amenity = amenity + " or amenity = 'casino'";
+							ischecked = ischecked + 1;
+						}
+						if (document.getElementById('cinema').checked == true){
+							if (amenity == "") amenity = "'cinema'";
+							else amenity = amenity + " or amenity = 'cinema'";
+							ischecked = ischecked + 1;
+						}
+						if (document.getElementById('theatre').checked == true){
+							if (amenity == "") amenity = "'theatre'";
+							else amenity = amenity + " or amenity = 'theatre'";
+							ischecked = ischecked + 1;
+						}
+						
+						if (ischecked != 0){
+							jQuery.get("http://localhost:8080/PDT_project/application/query/getByDistance/" + longitude + "/" + latitude + "/" + dist + "/" + amenity, function(response) { 
+								layer.setGeoJSON(response);	
+							});
+						}
+						
+						circle = L.circle([latitude, longitude], dist, {
+			    			color: 'green',
+			    			fillColor: '#66ff33',
+			    			fillOpacity: 0.5
+						}).addTo(map);
+						
+					}
+				}
+				
+			}
+			
+			layer.on('layeradd', function(e) {
+			    var text = e.layer.feature.properties.name + "</b><br/>Type: " + e.layer.feature.properties.amenity;
+			    e.layer.bindPopup(text);
+			});
+			
+			layer2.on('layeradd', function(e) {
+				if (layer != null) layer.clearLayers();
+			    var text = e.layer.feature.properties.name + "</b><br/>Type: " + e.layer.feature.properties.amenity;
+			    e.layer.bindPopup(text);
+			});
+			
+			layer2.on('dblclick', function(e) {
+			    
+			    var l1 = e.latlng.lat;
+			    var l2 = e.latlng.lng;
+			    jQuery.get("http://localhost:8080/PDT_project/application/query/getPark/" + l2 + "/" + l1, function(response) { 
+					layer.setGeoJSON(response);	
+				});
+			    if (circle!=null) map.removeLayer(circle);
+			    circle = L.circle([l1, l2], 200, {
+			    	color: 'green',
+	    			fillColor: '#66ff33',
+	    			fillOpacity: 0.5
+				}).addTo(map);
+			});
+			
+			function getNearestAndATM(){
+				
+				var amenity;
+				var operator = "";
+				var tp = document.getElementById("type");
+				var type = tp.options[tp.selectedIndex].text;
+				var type_tlc = String(type).toLowerCase();
+				var b = document.getElementById("bank");
+				var bank = b.options[b.selectedIndex].text;
+				var type_bank = String(bank);
+				if (layer != null) layer.clearLayers();
+				if (layer2 != null) layer2.clearLayers();
+				if (circle!=null) map.removeLayer(circle);
+				if (marker==null || latitude == null) window.alert("Position is not selected");				
+				else{
+					if (type_tlc == "") window.alert("Type is not selected");
+					else{
+						
+						amenity = type_tlc;
+						
+						if (type_bank == "All"){
+							jQuery.get("http://localhost:8080/PDT_project/application/query/getNearestAndATM/" + longitude + "/" + latitude + "/" + amenity, function(response) { 
+								layer.setGeoJSON(response);	
+							});
+						}
+						else{
+							
+							if (type_bank == "Slovenska sporitelna"){
+								operator = "sporite";
+								window.alert("som tu");
+							}
+							else if (type_bank == "CSOB"){
+								operator = "SOB";
+							}
+							else if (type_bank == "Postova banka"){
+								operator = "Poštová banka";
+							}
+							else if (type_bank == "VUB"){
+								operator = "VÚB";
+							}
+							else operator = type_bank;
+							
+							jQuery.get("http://localhost:8080/PDT_project/application/query/getNearestAndATMType/" + longitude + "/" + latitude + "/" + amenity + "/" + operator, function(response) { 
+								layer.setGeoJSON(response);	
+							});
+							
+						}
+						
+					}
+				}
+				
+				
+				
+			}
+			
+			
+			function getNearestAndATM5(){
+				
+				var amenity = "";
+				var tp = document.getElementById("type");
+				var type = tp.options[tp.selectedIndex].text;
+				var type_tlc = String(type).toLowerCase();
+
+				if (layer != null) layer.clearLayers();
+				if (layer2 != null) layer2.clearLayers();
+				if (circle!=null) map.removeLayer(circle);
+				if (marker==null || latitude == null) window.alert("Position is not selected");				
+				else{
+					if (type_tlc == "") window.alert("Type is not selected");
+					else{
+						
+						amenity = type_tlc;
+						
+						jQuery.get("http://localhost:8080/PDT_project/application/query/getNearestAndATM5/" + longitude + "/" + latitude + "/" + amenity, function(response) { 
+							layer.setGeoJSON(response);	
+						});
+						
+					}
+					
+					
+				}
+				
+			}
+			
+			
+			function getByDistanceWithPark(){
+				
+				var amenity = "";
+				var dist = document.getElementById('dist').value;
+				if (layer != null) layer.clearLayers();
+				if (layer2 != null) layer2.clearLayers();
+				if (circle!=null) map.removeLayer(circle);
+				if (marker==null || latitude == null) window.alert("Position is not selected");
+				
+				else{
+					if (dist == "") window.alert("Distance is not selected");
+					else{
+						
+						if (document.getElementById('bar').checked == true){
+							if (amenity == "") amenity = "'bar'";
+							else amenity = amenity + " or amenity = 'bar'";
+						}
+						if (document.getElementById('pub').checked == true){
+							if (amenity == "") amenity = "'pub'";
+							else amenity = amenity + " or amenity = 'pub'";
+						}
+						if (document.getElementById('club').checked == true){
+							if (amenity == "") amenity = "'nightclub'";
+							else amenity = amenity + " or amenity = 'nightclub'";
+						}
+						if (document.getElementById('casino').checked == true){
+							if (amenity == "") amenity = "'casino'";
+							else amenity = amenity + " or amenity = 'casino'";
+						}
+						if (document.getElementById('cinema').checked == true){
+							if (amenity == "") amenity = "'cinema'";
+							else amenity = amenity + " or amenity = 'cinema'";
+						}
+						if (document.getElementById('theatre').checked == true){
+							if (amenity == "") amenity = "'theatre'";
+							else amenity = amenity + " or amenity = 'theatre'";
+						}
+						
+						
+						jQuery.get("http://localhost:8080/PDT_project/application/query/getByDistanceWithPark/" + longitude + "/" + latitude + "/" + dist + "/" + amenity, function(response) { 
+							layer2.setGeoJSON(response);	
+						});
+						
+						
+					}
+				}
+				
+			}
+			
+			
+			function clearMap(){
+				
+				if (circle!=null) map.removeLayer(circle);
+				if (marker!=null) map.removeLayer(marker);
+				if (layer != null) layer.clearLayers();
+				if (layer2 != null) layer2.clearLayers();
+				latitude = null;
+				longitude = null;
+				
+			}
+		</script>
+		
+		</div>	
+		
+	</body>
+
+
+</html>
